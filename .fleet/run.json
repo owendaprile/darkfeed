@@ -1,0 +1,18 @@
+{
+    "configurations": [
+        {
+            "name": "darkfeed [:app:run]",
+            "type": "gradle",
+            "workingDir": "$PROJECT_DIR$",
+            "tasks": [
+                ":app:run"
+            ],
+            "args": [
+                ""
+            ],
+            "initScripts": {
+                "flmapper": "ext.mapPath = { path -> path }"
+            }
+        }
+    ]
+}
