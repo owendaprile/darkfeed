@@ -1,6 +1,7 @@
 package gay.averyrivers
 
 import gay.averyrivers.lexicon.app.bsky.feed.FeedSkeleton
+import gay.averyrivers.lexicon.app.bsky.feed.defs.PostView
 import gay.averyrivers.lexicon.app.bsky.feed.defs.SkeletonFeedPost
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -68,20 +69,29 @@ class DarkFeedApi(
         )
     }
 
-    // SOOOOO
-    // I NEED TO CHECK THE SELF LABEL (at://did:plc:vwivwqztbf6pmkgss3nv2scy/app.bsky.feed.post/3la5sxh4ica2r)
-    // AND THE MODERATION.BSKY.APP LABEL (at://did:plc:ujrpupcjf22a4riwjbupdv42/app.bsky.feed.post/3la5qntezsu2v)
-
     private suspend fun handleGetFeedSkeleton(call: RoutingCall) {
         // TODO: Get requestor's DID from Authorization header.
         call.respond(buildFeedSkeleton("did:plc:zhxv5pxpmojhnvaqy4mwailv"))
     }
 
     private suspend fun buildFeedSkeleton(requestor: String): FeedSkeleton {
+        val actorLikes = bskyApi.getLikesByActor(requestor)
+            .first
+            .map { likeRef -> likeRef.value.subject.uri }
+
+        val labeledPosts = actorLikes
+            .chunked(25)
+            .map { chunkedActorLikes ->
+                bskyApi.getPostLabels(chunkedActorLikes)
+                    .filter { post ->
+                        post.labels?.any { label -> listOf("porn", "sexual").contains(label.value) } ?: false
+                    }
+            }
+            .flatten()
+
+
         return FeedSkeleton(
-            feed = bskyApi.getLikesByActor(requestor)
-                .first
-                .map { likeRef -> SkeletonFeedPost(post = likeRef.value.subject.uri) }
+            feed = labeledPosts.map { post -> SkeletonFeedPost(post = post.uri) }
         )
     }
 }

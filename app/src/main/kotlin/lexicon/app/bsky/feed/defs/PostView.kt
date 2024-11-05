@@ -7,5 +7,5 @@ import kotlinx.serialization.Serializable
 data class PostView(
     val uri: String,
     val cid: String,
-    val labels: List<Label>,
+    val labels: List<Label>?,
 )

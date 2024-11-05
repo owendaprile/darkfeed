@@ -8,6 +8,8 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
+import io.ktor.client.plugins.auth.*
+import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
@@ -18,7 +20,9 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 class BskyApi(
-    private var pdsUrl: Url = Url("https://bsky.social"),
+    private val pdsUrl: Url = Url("https://bsky.social"),
+
+    private val bearerTokens: MutableList<BearerTokens> = mutableListOf(),
 
     private val httpClient: HttpClient = HttpClient(CIO) {
         install(ContentNegotiation) {
@@ -30,6 +34,43 @@ class BskyApi(
 
         install(Logging)
 
+        install(Auth) {
+            bearer {
+                loadTokens {
+                    bearerTokens.lastOrNull()
+                }
+
+                refreshTokens {
+                    val currentRefreshToken = bearerTokens.lastOrNull()?.refreshToken ?: return@refreshTokens null
+
+                    @Serializable
+                    data class Response(val accessJwt: String, val refreshJwt: String)
+
+                    val refreshSessionResponse = client.post("com.atproto.server.refreshSession") {
+                        header("Authorization", "Bearer $currentRefreshToken")
+                        markAsRefreshTokenRequest()
+                    }
+
+                    when (refreshSessionResponse.status) {
+                        HttpStatusCode.OK -> {
+                            val refreshSessionTokens = refreshSessionResponse.body<Response>()
+                            val newBearerTokens =
+                                BearerTokens(refreshSessionTokens.accessJwt, refreshSessionTokens.refreshJwt)
+
+                            bearerTokens.addLast(newBearerTokens)
+
+                            return@refreshTokens newBearerTokens
+                        }
+
+                        HttpStatusCode.BadRequest,
+                        HttpStatusCode.Unauthorized -> return@refreshTokens null
+
+                        else -> return@refreshTokens null
+                    }
+                }
+            }
+        }
+
         defaultRequest {
             url {
                 protocol = pdsUrl.protocol
@@ -39,16 +80,6 @@ class BskyApi(
         }
     },
 ) {
-
-
-    data class AuthTokens(
-        val accessJwt: String,
-        val refreshJwt: String,
-        val did: String,
-    )
-
-    private var authTokens: AuthTokens? = null
-
     @Serializable
     data class ErrorResponse(
         val error: String,
@@ -70,7 +101,7 @@ class BskyApi(
         when (response.status) {
             HttpStatusCode.OK -> {
                 val tokens: Response = response.body()
-                this.authTokens = AuthTokens(tokens.accessJwt, tokens.refreshJwt, tokens.did)
+                bearerTokens.addLast(BearerTokens(tokens.accessJwt, tokens.refreshJwt))
             }
 
             HttpStatusCode.BadRequest,
@@ -111,14 +142,14 @@ class BskyApi(
         @Serializable
         data class Request(
             val repo: String,
+            val collection: String,
             val rkey: String,
             val record: Generator,
-            val collection: String = "app.bsky.feed.generator",
         )
 
         val response = httpClient.post("com.atproto.repo.putRecord") {
             contentType(ContentType.Application.Json)
-            setBody(Request(repo, rkey, record))
+            setBody(Request(repo, "app.bsky.feed.generator", rkey, record))
         }
 
         when (response.status) {

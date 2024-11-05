@@ -39,7 +39,7 @@ fun main() {
         pdsUrl = buildUrl {
             protocol = URLProtocol.HTTPS
             host = ownerPds
-        }
+        },
     )
 
     // Make sure the feed generator record exists and points to the current
