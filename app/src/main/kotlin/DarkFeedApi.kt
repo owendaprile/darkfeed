@@ -68,6 +68,10 @@ class DarkFeedApi(
         )
     }
 
+    // SOOOOO
+    // I NEED TO CHECK THE SELF LABEL (at://did:plc:vwivwqztbf6pmkgss3nv2scy/app.bsky.feed.post/3la5sxh4ica2r)
+    // AND THE MODERATION.BSKY.APP LABEL (at://did:plc:ujrpupcjf22a4riwjbupdv42/app.bsky.feed.post/3la5qntezsu2v)
+
     private suspend fun handleGetFeedSkeleton(call: RoutingCall) {
         // TODO: Get requestor's DID from Authorization header.
         call.respond(buildFeedSkeleton("did:plc:zhxv5pxpmojhnvaqy4mwailv"))
