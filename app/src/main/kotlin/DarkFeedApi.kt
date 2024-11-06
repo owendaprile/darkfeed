@@ -1,5 +1,6 @@
 package gay.averyrivers
 
+import com.auth0.jwt.JWT
 import gay.averyrivers.lexicon.app.bsky.feed.FeedSkeleton
 import gay.averyrivers.lexicon.app.bsky.feed.defs.PostView
 import gay.averyrivers.lexicon.app.bsky.feed.defs.SkeletonFeedPost
@@ -70,27 +71,43 @@ class DarkFeedApi(
     }
 
     private suspend fun handleGetFeedSkeleton(call: RoutingCall) {
-        // TODO: Get requestor's DID from Authorization header.
-        call.respond(buildFeedSkeleton("did:plc:zhxv5pxpmojhnvaqy4mwailv"))
+        val requestor = JWT.decode(call.request.headers["Authorization"]?.removePrefix("Bearer ")).issuer
+        val limit = call.queryParameters["limit"]?.toIntOrNull()
+        val cursor = call.queryParameters["cursor"]
+
+        println("handleGetFeedSkeleton: requestor: $requestor, limit: $limit, cursor: $cursor")
+
+        call.respond(buildFeedSkeleton(requestor, limit, cursor))
     }
 
-    private suspend fun buildFeedSkeleton(requestor: String): FeedSkeleton {
-        val actorLikes = bskyApi.getLikesByActor(requestor)
-            .first
-            .map { likeRef -> likeRef.value.subject.uri }
+    private suspend fun buildFeedSkeleton(requestor: String, limit: Int? = null, cursor: String? = null): FeedSkeleton {
+        val labeledPosts: MutableSet<PostView> = mutableSetOf()
+        var apiCallsCount = 0
+        var getLikesByActorCursor: String? = cursor?.split(':')?.last()
 
-        val labeledPosts = actorLikes
-            .chunked(25)
-            .map { chunkedActorLikes ->
-                bskyApi.getPostLabels(chunkedActorLikes)
-                    .filter { post ->
-                        post.labels?.any { label -> listOf("porn", "sexual").contains(label.value) } ?: false
-                    }
-            }
-            .flatten()
+        while (labeledPosts.count() < (limit ?: 10) && apiCallsCount < 10) {
+            bskyApi.getLikesByActor(requestor, getLikesByActorCursor)
+                .also { getLikesByActorCursor = it.second }
+                .first
+                .map { likeRef -> likeRef.value.subject.uri }
+                .chunked(25)
+                .map { likeUris ->
+                    // TODO: Run these calls concurrently
+                    bskyApi.getPostLabels(likeUris)
+                        .filter { post ->
+                            post.labels?.any { label -> listOf("porn", "sexual").contains(label.value) } ?: false
+                        }
+                }
+                .flatten()
+                .also { labeledPosts.addAll(it) }
 
+            apiCallsCount++
+
+            println("\u001b[31mgetLikesByActor Call Count: $apiCallsCount\nPosts Found: ${labeledPosts.count()}\nCursor: $getLikesByActorCursor\u001b[0m")
+        }
 
         return FeedSkeleton(
+            cursor = "$requestor:$getLikesByActorCursor",
             feed = labeledPosts.map { post -> SkeletonFeedPost(post = post.uri) }
         )
     }
