@@ -29,11 +29,10 @@ const val FEED_DESCRIPTION = "Hi!"
 const val FEED_RECORD_KEY = "darkfeed"
 
 fun main() {
-    // TODO: Move this to an env file!
-    val hostname = ""
-    val ownerPds = ""
-    val ownerDid = ""
-    val ownerAppPassword = ""
+    val ownerPds = System.getenv("DF_OWNER_PDS")
+    val ownerDid = System.getenv("DF_OWNER_DID")
+    val ownerAppPassword = System.getenv("DF_OWNER_PASSWORD")
+    val hostname = System.getenv("DF_HOSTNAME")
 
     val api = BskyApi(
         pdsUrl = buildUrl {

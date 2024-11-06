@@ -1,0 +1,27 @@
+# fly.toml app configuration file generated for darkfeed on 2024-11-05T20:07:05-05:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'darkfeed'
+primary_region = 'iad'
+
+[build]
+  dockerfile = 'Containerfile'
+  ignorefile = '.containerignore'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+[[vm]]
+  size = 'shared-cpu-1x'
+
+[env]
+  DF_OWNER_PDS = 'bsky.social'
+  DF_OWNER_DID = 'did:plc:zhxv5pxpmojhnvaqy4mwailv'
+  DF_HOSTNAME = 'darkfeed.fly.dev'
