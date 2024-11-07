@@ -7,9 +7,7 @@
             "tasks": [
                 ":app:run"
             ],
-            "args": [
-                ""
-            ],
+            "environmentFile": "local.env",
             "initScripts": {
                 "flmapper": "ext.mapPath = { path -> path }"
             }

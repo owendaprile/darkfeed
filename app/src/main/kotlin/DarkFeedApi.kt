@@ -11,6 +11,10 @@ import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -56,6 +60,8 @@ class DarkFeedApi(
     }
 
     private suspend fun handleWellKnownDidJson(call: RoutingCall) {
+        println("handleWellKnownDid: responding with hostname $hostname")
+
         call.respond(
             DidJson(
                 id = "did:web:$hostname",
@@ -84,30 +90,53 @@ class DarkFeedApi(
         val labeledPosts: MutableSet<PostView> = mutableSetOf()
         var apiCallsCount = 0
         var getLikesByActorCursor: String? = cursor?.split(':')?.last()
+        var isFeedFinished: Boolean = false
 
-        while (labeledPosts.count() < (limit ?: 10) && apiCallsCount < 10) {
-            bskyApi.getLikesByActor(requestor, getLikesByActorCursor)
+        while (labeledPosts.count() < (limit ?: 10) && apiCallsCount < 10 && !isFeedFinished) {
+            val likes = bskyApi.getLikesByActor(requestor, getLikesByActorCursor)
+                .also {
+                    if (it.second == null) {
+                        println("buildFeedSkeleton: $requestor: getLikes cursor is null, no more likes available")
+                        isFeedFinished = true
+                    }
+                }
                 .also { getLikesByActorCursor = it.second }
                 .first
                 .map { likeRef -> likeRef.value.subject.uri }
-                .chunked(25)
-                .map { likeUris ->
-                    // TODO: Run these calls concurrently
-                    bskyApi.getPostLabels(likeUris)
-                        .filter { post ->
-                            post.labels?.any { label -> listOf("porn", "sexual").contains(label.value) } ?: false
-                        }
-                }
-                .flatten()
-                .also { labeledPosts.addAll(it) }
+
+            println("buildFeedSkeleton: $requestor: got ${likes.count()} likes, new cursor: $getLikesByActorCursor")
+
+            val handles: MutableList<Job> = mutableListOf()
+
+            runBlocking {
+                likes
+                    .chunked(25)
+                    .forEach { likeUris ->
+                        launch {
+                            bskyApi.getPostLabels(likeUris)
+                                .filter { post ->
+                                    post.labels?.any { label -> listOf("porn", "sexual").contains(label.value) }
+                                        ?: false
+                                }.also { labeledPosts.addAll(it) }
+                        }.also { handles.add(it) }
+                    }
+            }
+
+            handles.joinAll()
+
+            println("buildFeedSkeleton: $requestor: found ${labeledPosts.count()} labeled likes")
 
             apiCallsCount++
-
-            println("\u001b[31mgetLikesByActor Call Count: $apiCallsCount\nPosts Found: ${labeledPosts.count()}\nCursor: $getLikesByActorCursor\u001b[0m")
         }
 
+        println("buildFeedSkeleton: $requestor: returning FeedSkeleton, required $apiCallsCount getLikes calls")
+
         return FeedSkeleton(
-            cursor = "$requestor:$getLikesByActorCursor",
+            cursor = if (!isFeedFinished) {
+                "$requestor:$getLikesByActorCursor"
+            } else {
+                null
+            },
             feed = labeledPosts.map { post -> SkeletonFeedPost(post = post.uri) }
         )
     }
