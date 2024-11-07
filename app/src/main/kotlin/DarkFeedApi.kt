@@ -115,8 +115,14 @@ class DarkFeedApi(
                         launch {
                             bskyApi.getPostLabels(likeUris)
                                 .filter { post ->
-                                    post.labels?.any { label -> listOf("porn", "sexual").contains(label.value) }
-                                        ?: false
+                                    post.labels?.any { label ->
+                                        listOf(
+                                            "porn",
+                                            "sexual",
+                                            "nudity",
+                                            "sexual-figurative"
+                                        ).contains(label.value)
+                                    } ?: false
                                 }.also { labeledPosts.addAll(it) }
                         }.also { handles.add(it) }
                     }
