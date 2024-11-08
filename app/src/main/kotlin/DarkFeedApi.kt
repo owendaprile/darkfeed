@@ -11,13 +11,11 @@ import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.joinAll
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
+val DESIRED_LABELS: List<String> = listOf("porn", "sexual", "nudity", "sexual-figurative")
 
 class DarkFeedApi(
     private val hostname: String,
@@ -83,16 +81,16 @@ class DarkFeedApi(
 
         println("handleGetFeedSkeleton: requestor: $requestor, limit: $limit, cursor: $cursor")
 
-        call.respond(buildFeedSkeleton(requestor, limit, cursor))
+        call.respond(buildFeedSkeleton(requestor, limit ?: 25, cursor))
     }
 
-    private suspend fun buildFeedSkeleton(requestor: String, limit: Int? = null, cursor: String? = null): FeedSkeleton {
+    private suspend fun buildFeedSkeleton(requestor: String, limit: Int = 25, cursor: String? = null): FeedSkeleton {
         val labeledPosts: MutableSet<PostView> = mutableSetOf()
         var apiCallsCount = 0
         var getLikesByActorCursor: String? = cursor?.split(':')?.last()
         var isFeedFinished: Boolean = false
 
-        while (labeledPosts.count() < (limit ?: 10) && apiCallsCount < 10 && !isFeedFinished) {
+        while (labeledPosts.count() < limit && apiCallsCount < 10 && !isFeedFinished) {
             val likes = bskyApi.getLikesByActor(requestor, getLikesByActorCursor)
                 .also {
                     if (it.second == null) {
@@ -106,29 +104,22 @@ class DarkFeedApi(
 
             println("buildFeedSkeleton: $requestor: got ${likes.count()} likes, new cursor: $getLikesByActorCursor")
 
-            val handles: MutableList<Job> = mutableListOf()
-
             runBlocking {
-                likes
-                    .chunked(25)
+                val jobs: MutableList<Deferred<List<PostView>>> = mutableListOf()
+
+                likes.chunked(25)
                     .forEach { likeUris ->
-                        launch {
+                        async {
                             bskyApi.getPostLabels(likeUris)
                                 .filter { post ->
-                                    post.labels?.any { label ->
-                                        listOf(
-                                            "porn",
-                                            "sexual",
-                                            "nudity",
-                                            "sexual-figurative"
-                                        ).contains(label.value)
-                                    } ?: false
-                                }.also { labeledPosts.addAll(it) }
-                        }.also { handles.add(it) }
+                                    post.labels?.any { label -> DESIRED_LABELS.contains(label.value) } ?: false
+                                }
+                        }.also { deferred -> jobs.add(deferred) }
                     }
-            }
 
-            handles.joinAll()
+                jobs.map { it.await() }
+                    .forEach { labeledPosts.addAll(it) }
+            }
 
             println("buildFeedSkeleton: $requestor: found ${labeledPosts.count()} labeled likes")
 
