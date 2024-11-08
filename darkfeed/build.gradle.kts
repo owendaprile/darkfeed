@@ -29,6 +29,5 @@ java {
 }
 
 application {
-    mainClass = "gay.averyrivers.ApplicationKt"
-    applicationDefaultJvmArgs = listOf("-Dio.ktor.development=true")
+    mainClass = "MainKt"
 }

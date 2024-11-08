@@ -1,6 +1,6 @@
-package gay.averyrivers.lexicon.app.bsky.feed.defs
+package api.lexicon.app.bsky.feed.defs
 
-import gay.averyrivers.lexicon.com.atproto.label.defs.Label
+import api.lexicon.com.atproto.label.defs.Label
 import kotlinx.serialization.Serializable
 
 @Serializable

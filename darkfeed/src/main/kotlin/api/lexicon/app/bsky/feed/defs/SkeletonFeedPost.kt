@@ -1,4 +1,4 @@
-package gay.averyrivers.lexicon.app.bsky.feed.defs
+package api.lexicon.app.bsky.feed.defs
 
 import kotlinx.serialization.Serializable
 

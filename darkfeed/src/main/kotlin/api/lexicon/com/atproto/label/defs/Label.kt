@@ -1,4 +1,4 @@
-package gay.averyrivers.lexicon.com.atproto.label.defs
+package api.lexicon.com.atproto.label.defs
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

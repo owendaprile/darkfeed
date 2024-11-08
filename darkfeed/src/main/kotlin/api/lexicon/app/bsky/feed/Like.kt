@@ -1,6 +1,6 @@
-package gay.averyrivers.lexicon.app.bsky.feed
+package api.lexicon.app.bsky.feed
 
-import gay.averyrivers.lexicon.com.atproto.repo.StrongRef
+import api.lexicon.com.atproto.repo.StrongRef
 import kotlinx.serialization.Serializable
 
 @Serializable

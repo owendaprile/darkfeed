@@ -1,11 +1,11 @@
 {
     "configurations": [
         {
-            "name": "darkfeed [:app:run]",
+            "name": "darkfeed [:darkfeed:run]",
             "type": "gradle",
             "workingDir": "$PROJECT_DIR$",
             "tasks": [
-                ":app:run"
+                ":darkfeed:run"
             ],
             "environmentFile": "local.env",
             "initScripts": {

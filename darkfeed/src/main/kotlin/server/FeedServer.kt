@@ -1,9 +1,10 @@
-package gay.averyrivers
+package server
 
+import api.BskyApi
+import api.lexicon.app.bsky.feed.FeedSkeleton
+import api.lexicon.app.bsky.feed.defs.PostView
+import api.lexicon.app.bsky.feed.defs.SkeletonFeedPost
 import com.auth0.jwt.JWT
-import gay.averyrivers.lexicon.app.bsky.feed.FeedSkeleton
-import gay.averyrivers.lexicon.app.bsky.feed.defs.PostView
-import gay.averyrivers.lexicon.app.bsky.feed.defs.SkeletonFeedPost
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -17,7 +18,7 @@ import kotlinx.serialization.json.Json
 
 val DESIRED_LABELS: List<String> = listOf("porn", "sexual", "nudity", "sexual-figurative")
 
-class DarkFeedApi(
+class FeedServer(
     private val hostname: String,
     private val bskyApi: BskyApi,
     private val port: Int = 8080,

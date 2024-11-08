@@ -1,6 +1,6 @@
-package gay.averyrivers.lexicon.app.bsky.feed
+package api.lexicon.app.bsky.feed
 
-import gay.averyrivers.lexicon.app.bsky.feed.defs.SkeletonFeedPost
+import api.lexicon.app.bsky.feed.defs.SkeletonFeedPost
 import kotlinx.serialization.Serializable
 
 @Serializable

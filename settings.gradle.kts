@@ -12,4 +12,4 @@ plugins {
 }
 
 rootProject.name = "darkfeed"
-include("app")
+include("darkfeed")

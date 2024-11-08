@@ -1,4 +1,4 @@
-package gay.averyrivers.lexicon.com.atproto.repo
+package api.lexicon.com.atproto.repo
 
 import kotlinx.serialization.Serializable
 

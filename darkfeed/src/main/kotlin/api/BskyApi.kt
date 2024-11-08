@@ -1,9 +1,8 @@
-package gay.averyrivers
+package api
 
-import gay.averyrivers.lexicon.app.bsky.feed.Generator
-import gay.averyrivers.lexicon.app.bsky.feed.LikeRef
-import gay.averyrivers.lexicon.app.bsky.feed.defs.PostView
-import gay.averyrivers.lexicon.com.atproto.label.defs.Label
+import api.lexicon.app.bsky.feed.Generator
+import api.lexicon.app.bsky.feed.LikeRef
+import api.lexicon.app.bsky.feed.defs.PostView
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
